@@ -160,7 +160,7 @@ func (rt *Runtime) GetActorCodeCID(addr addr.Address) (ret cid.Cid, ok bool) {
 	return
 }
 
-func (rt *Runtime) GetRandomness(personalization crypto.DomainSeparationTag, randEpoch abi.ChainEpoch, entropy []byte) abi.Randomness {
+func (rt *Runtime) GetRandomness(_ crypto.DomainSeparationTag, _ abi.ChainEpoch, _ []byte) abi.Randomness {
 	rt.requireInCall()
 	panic("implement me")
 }
@@ -227,7 +227,7 @@ func (rt *Runtime) CreateActor(codeId cid.Cid, address addr.Address) {
 	}()
 }
 
-func (rt *Runtime) DeleteActor() {
+func (rt *Runtime) DeleteActor(_ addr.Address) {
 	rt.requireInCall()
 	if rt.inTransaction {
 		rt.Abortf(exitcode.SysErrorIllegalActor, "side-effect within transaction")
@@ -256,7 +256,7 @@ func (rt *Runtime) Context() context.Context {
 	return rt.ctx
 }
 
-func (rt *Runtime) StartSpan(name string) runtime.TraceSpan {
+func (rt *Runtime) StartSpan(_ string) runtime.TraceSpan {
 	rt.requireInCall()
 	return &TraceSpan{}
 }
