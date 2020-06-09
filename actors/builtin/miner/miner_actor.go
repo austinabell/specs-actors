@@ -363,6 +363,7 @@ func (a Actor) PreCommitSector(rt Runtime, params *SectorPreCommitInfo) *adt.Emp
 
 		validateExpiration(rt, &st, params.Expiration)
 
+		// * This error not handled
 		newlyVestedFund, err := st.UnlockVestedFunds(store, rt.CurrEpoch())
 		availableBalance := st.GetAvailableBalance(rt.CurrentBalance())
 		depositReq := precommitDeposit(st.GetSectorSize(), params.Expiration-rt.CurrEpoch())
@@ -581,6 +582,7 @@ func (a Actor) CheckSectorProven(rt Runtime, params *CheckSectorProvenParams) *a
 	store := adt.AsStore(rt)
 	sectorNo := params.SectorNumber
 
+	// * Why is error not checked here?
 	_, found, _ := st.GetSector(store, sectorNo)
 	if !found {
 		rt.Abortf(exitcode.ErrNotFound, "Sector hasn't been proven %v", sectorNo)
@@ -1302,6 +1304,7 @@ func checkPrecommitExpiry(rt Runtime, sectors *abi.BitField) {
 	// initialize here to add together for all sectors and minimize calls across actors
 	depositToBurn := abi.NewTokenAmount(0)
 	rt.State().Transaction(&st, func() interface{} {
+		// * Flag unchecked pointer (sectors seems like it might be nil in cases?)
 		err := sectors.ForEach(func(i uint64) error {
 			sectorNo := abi.SectorNumber(i)
 			sector, found, err := st.GetPrecommittedSector(store, sectorNo)
@@ -1504,6 +1507,7 @@ func requestTerminateDeals(rt Runtime, dealIDs []abi.DealID) {
 	builtin.RequireSuccess(rt, code, "failed to terminate deals %v, exit code %v", dealIDs, code)
 }
 
+// * this function is unused
 func requestTerminateAllDeals(rt Runtime, st *State) {
 	// TODO: red flag this is an ~unbounded computation.
 	// Transform into an idempotent partial computation that can be progressed on each invocation.

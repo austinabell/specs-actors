@@ -240,6 +240,7 @@ func AssignNewSectors(deadlines *Deadlines, partitionSize uint64, newSectors []u
 	sortDeadlines := func() {
 		// Order deadline indexes by corresponding partition count (then secondarily by index) to form a queue.
 		sort.SliceStable(dlIdxs, func(i, j int) bool {
+			// * not really a comment against, but does this indexes the struct as it sorts it seems, or does go perform a copy?
 			idxI, idxJ := dlIdxs[i], dlIdxs[j]
 			countI, countJ := deadlinePartitionCounts[idxI], deadlinePartitionCounts[idxJ]
 			if countI == countJ {
