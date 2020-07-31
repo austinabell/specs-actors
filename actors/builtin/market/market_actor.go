@@ -93,7 +93,7 @@ func (a Actor) WithdrawBalance(rt Runtime, params *WithdrawBalanceParams) *adt.E
 		builtin.RequireNoErr(rt, err, exitcode.ErrIllegalState, "failed to get locked balance")
 
 		ex, err := msm.escrowTable.SubtractWithMinimum(nominal, params.Amount, minBalance)
-		builtin.RequireNoErr(rt, err, exitcode.ErrIllegalState, "failed to subtract form escrow table")
+		builtin.RequireNoErr(rt, err, exitcode.ErrIllegalState, "failed to subtract from escrow table")
 
 		err = msm.commitState()
 		builtin.RequireNoErr(rt, err, exitcode.ErrIllegalState, "failed to flush state")
@@ -324,7 +324,7 @@ func (a Actor) ActivateDeals(rt Runtime, params *ActivateDealsParams) *adt.Empty
 			builtin.RequireNoErr(rt, err, exitcode.ErrIllegalState, "failed to get pending proposal %v", propc)
 
 			if !has {
-				rt.Abortf(exitcode.ErrIllegalState, "tried to active deal that was not in the pending set (%s)", propc)
+				rt.Abortf(exitcode.ErrIllegalState, "tried to activate deal that was not in the pending set (%s)", propc)
 			}
 
 			err = msm.dealStates.Set(dealID, &DealState{
@@ -350,12 +350,12 @@ type ComputeDataCommitmentParams struct {
 func (a Actor) ComputeDataCommitment(rt Runtime, params *ComputeDataCommitmentParams) *cbg.CborCid {
 	rt.ValidateImmediateCallerType(builtin.StorageMinerActorCodeID)
 
-	pieces := make([]abi.PieceInfo, 0)
 	var st State
 	rt.State().Readonly(&st)
 	proposals, err := AsDealProposalArray(adt.AsStore(rt), st.Proposals)
 	builtin.RequireNoErr(rt, err, exitcode.ErrIllegalState, "failed to load deal dealProposals")
-
+	
+	pieces := make([]abi.PieceInfo, 0, len(params.DealIDs))
 	for _, dealID := range params.DealIDs {
 		deal, err := getDealProposal(proposals, dealID)
 		builtin.RequireNoErr(rt, err, exitcode.ErrIllegalState, "failed to get dealId %d", dealID)
@@ -449,6 +449,8 @@ func (a Actor) CronTick(rt Runtime, _ *adt.EmptyValue) *adt.EmptyValue {
 		builtin.RequireNoErr(rt, err, exitcode.ErrIllegalState, "failed to load state")
 
 		for i := st.LastCron + 1; i <= rt.CurrEpoch(); i++ {
+			// * You're holding this reference to msm with the foreach and are using it throughout 
+			// * the passed in function (unsafe)
 			err = msm.dealsByEpoch.ForEach(i, func(dealID abi.DealID) error {
 				deal, err := getDealProposal(msm.dealProposals, dealID)
 				builtin.RequireNoErr(rt, err, exitcode.ErrIllegalState, "failed to get dealId %d", dealID)
@@ -464,6 +466,7 @@ func (a Actor) CronTick(rt Runtime, _ *adt.EmptyValue) *adt.EmptyValue {
 					// Not yet appeared in proven sector; check for timeout.
 					AssertMsg(rt.CurrEpoch() >= deal.StartEpoch, "if sector start is not set, we must be in a timed out state")
 
+					// * This is main issue because this function mutates msm (maybe no overlap now, but still a bit sketchy)
 					slashed := msm.processDealInitTimedOut(rt, deal)
 					if !slashed.IsZero() {
 						amountSlashed = big.Add(amountSlashed, slashed)
@@ -489,6 +492,7 @@ func (a Actor) CronTick(rt Runtime, _ *adt.EmptyValue) *adt.EmptyValue {
 					builtin.RequireNoErr(rt, pdErr, exitcode.ErrIllegalState, "failed to delete pending proposal")
 				}
 
+				// * Another case when msm itself is mutably used
 				slashAmount, nextEpoch, removeDeal := msm.updatePendingDealState(rt, state, deal, rt.CurrEpoch())
 				Assert(slashAmount.GreaterThanEqual(big.Zero()))
 				if removeDeal {
@@ -605,6 +609,7 @@ func ValidateDealsForActivation(st *State, store adt.Store, dealIDs []abi.DealID
 		if !found {
 			return big.Int{}, big.Int{}, exitcode.ErrNotFound.Wrapf("no such deal %d", dealID)
 		}
+		// * Is this function call intentionally dropping the exit code from validateDealCanActivate?
 		if err = validateDealCanActivate(proposal, minerAddr, sectorExpiry, currEpoch); err != nil {
 			return big.Int{}, big.Int{}, xerrors.Errorf("cannot activate deal %d: %w", dealID, err)
 		}

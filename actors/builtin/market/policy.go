@@ -22,6 +22,7 @@ func dealDurationBounds(size abi.PaddedPieceSize) (min abi.ChainEpoch, max abi.C
 	return abi.ChainEpoch(180 * builtin.EpochsInDay), abi.ChainEpoch(540 * builtin.EpochsInDay) // PARAM_FINISH
 }
 
+// * Is this going to change in the future?
 func dealPricePerEpochBounds(size abi.PaddedPieceSize, duration abi.ChainEpoch) (min abi.TokenAmount, max abi.TokenAmount) {
 	return abi.NewTokenAmount(0), abi.TotalFilecoin // PARAM_FINISH
 }
@@ -44,10 +45,12 @@ func DealProviderCollateralBounds(pieceSize abi.PaddedPieceSize, verified bool, 
 	return minCollateral, abi.TotalFilecoin // PARAM_FINISH
 }
 
+// * Is this going to change in the future?
 func DealClientCollateralBounds(pieceSize abi.PaddedPieceSize, duration abi.ChainEpoch) (min abi.TokenAmount, max abi.TokenAmount) {
 	return abi.NewTokenAmount(0), abi.TotalFilecoin // PARAM_FINISH
 }
 
+// * Is this going to change in the future?
 // Penalty to provider deal collateral if the deadline expires before sector commitment.
 func collateralPenaltyForDealActivationMissed(providerCollateral abi.TokenAmount) abi.TokenAmount {
 	return providerCollateral // PARAM_FINISH
